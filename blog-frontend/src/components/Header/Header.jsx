@@ -61,15 +61,10 @@ const NavItems = ({ item }) =>{
                 }
             </ul>
            </div>
-        </div>
-    
-      
-    )}
-     
+        </div>  
+    )}     
   </li>
-  )
-
-}
+)}
 
 
 const Header = () => {

@@ -31,7 +31,7 @@ export const Hero = () => {
 
           </div>
 
-          <div className='hidden lg:block lg:w-1/2'>
+          <div className='lg:w-1/2'>
               <img 
                   className='w-full'
                   src={images.Hero4} 
