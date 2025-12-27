@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { loginUser, resetPassword, signUpUser, logout, updatePassword, forgotPassword  } from '../controllers/auth.controller.js';
 import {loginSchema, forgotPasswordSchema, signupSchema, updatePasswordSchema, resetPasswordSchema } from '../utils/auth/authValidator.js'
 import { validate } from '../middlewares/inputValidate.js';
-import isLoggedIn from '../middlewares/isLoggedIn.js';
+import isLoggedIn from '../middlewares/auth.middleware.js';
 
 const router = Router();
 
