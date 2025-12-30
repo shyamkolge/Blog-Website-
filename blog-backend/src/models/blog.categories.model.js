@@ -16,4 +16,5 @@ const categorySchema = new mongoose.Schema({
 })
 
 const Category = mongoose.model('BlogCategories', categorySchema, 'categories')
+
 export default Category 

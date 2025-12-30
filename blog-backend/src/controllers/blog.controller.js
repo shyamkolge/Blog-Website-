@@ -1,9 +1,10 @@
 import blogModel from "../models/blog.model.js";
 import { asyncHandler, ApiError, ApiResponce } from "../utils/index.js";
+import BlogCategoryController from "../models/blog.categories.model.js";
 
 // Create blog
 const createBlog = asyncHandler(async (req, res) => {
-  const { tittle, content, slug, visibility, category } = req.body;
+  const { tittle, content, slug, visibility, category } = req?.body;
 
   const author = req?.user._id;
 
@@ -19,7 +20,12 @@ const createBlog = asyncHandler(async (req, res) => {
     author,
   });
 
-  return ApiResponce(res, 201, true, blog, null, "Blog created successfully");
+  res.status(200).json({
+    status: "success",
+    data: blog,
+    message: "Blog created successfully",
+  });
+
 });
 
 // Delete blog
@@ -37,7 +43,7 @@ const deleteBlog = asyncHandler(async (req, res) => {
 
   await blogModel.findByIdAndDelete(blogId);
 
-  return ApiResponce(res, 200, true, null, null, "Blog deleted successfully");
+  return res.json(new ApiResponce(200, null,"Blog deleted successfully"));
 });
 
 // Update blog
@@ -62,29 +68,36 @@ const updateBlog = asyncHandler(async (req, res) => {
 
   await blog.save();
 
-  return ApiResponce(res, 200, true, blog, null, "Blog updated successfully");
+  return res.json(new ApiResponce(200, blog, "Blog updated successfully"));
 });
 
 // Get usr blog
 const getUserBlogs = asyncHandler(async (req, res) => {
   const author = req?.user._id;
   const blogs = await blogModel.find({ author });
-  return ApiResponce(
-    res,
-    200,
-    true,
-    blogs,
-    null,
-    "User Blogs fetched successfully"
-  );
+  return res.json(new ApiResponce(200, blogs, "User Blogs fetched successfully"));
 });
+
 
 // Get all blogs
 const getAllBlogs = asyncHandler(async (req, res) => {
   const blogs = await blogModel.find();
-  return ApiResponce(res, 200, true, blogs, null, "Blogs fetched successfully");
+  return res.json(new ApiResponce(200, blogs, "Blogs fetched successfully"));
 });
 
 
 
-export {createBlog, deleteBlog, updateBlog, getUserBlogs, getAllBlogs};
+// Category Controller
+const createCategory = asyncHandler(async (req, res) => {
+  const { name, slug } = req.body;
+
+  const category = await BlogCategoryController.create({
+    name,
+    slug,
+  });
+
+  return res.json(new ApiResponce(201, category, "Category created successfully"));
+});
+
+
+export { createBlog, deleteBlog, updateBlog, getUserBlogs, getAllBlogs, createCategory };

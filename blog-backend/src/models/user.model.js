@@ -69,26 +69,21 @@ const userSchema = new mongoose.Schema(
 );
 
 // For deleting the user
-userSchema.pre("/^find/", function (next) {
+userSchema.pre(/^find/, function (next) {
   this.find({ isActive: { $ne: false } });
-  next();
 });
 
 // Hash the password before the user is saved
 userSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) next();
+  if (!this.isModified("password")) return;
 
   this.password = await bcrypt.hash(this.password, 12);
-
-  next();
 });
 
 // `passwordChangedAt` will be updated only when the password is changed
 userSchema.pre("save", function (next) {
-  if (!this.isModified("password") || this.isNew) return next();
-
+  if (!this.isModified("password") || this.isNew) return;
   this.passwordChangedAt = Date.now() - 1000;
-  next();
 });
 
 // Check if the password is correct
@@ -109,6 +104,7 @@ userSchema.methods.isPasswordChangedAfterJWT = function (JWTTimeStamp) {
   return false;
 };
 
+
 userSchema.methods.createPasswordResetToken = function () {
   const resetToken = crypto.randomBytes(32).toString("hex");
   this.passwordResetToken = crypto
@@ -125,8 +121,8 @@ userSchema.methods.generateAccessToken = async function () {
     {
       _id: this._id,
     },
-    process.env.JWT_SECRET,
-    { expiresIn: "2h" }
+    process.env.ACCESS_TOKEN_SECRET,
+    { expiresIn: process.env.ACCESS_TOKEN_EXPIRY }
   );
 };
 

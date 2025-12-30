@@ -21,6 +21,8 @@ router.patch(
 
 // Forgot Password
 router.post("/forgot-password", validate(forgotPasswordSchema), forgotPassword);
+
+// Reset Password
 router.patch(
   "/reset-password/:token",
   validate(resetPasswordSchema),

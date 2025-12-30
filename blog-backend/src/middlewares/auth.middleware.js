@@ -4,6 +4,7 @@ import {userModel} from '../models/user.model.js';
 import {ApiError, asyncHandler} from '../utils/index.js'
 
 const isLoggedIn = asyncHandler(async (req, res, next) => {
+  
   const accessToken = req.cookies?.token;
 
   if (!accessToken) return next(new ApiError(401, "You are not logged in"));
@@ -11,7 +12,7 @@ const isLoggedIn = asyncHandler(async (req, res, next) => {
   try {
     const result = await promisify(jwt.verify)(
       accessToken,
-      process.env.JWT_SECRET
+      process.env.ACCESS_TOKEN_SECRET
     );
     
     if (!result) {
@@ -22,7 +23,7 @@ const isLoggedIn = asyncHandler(async (req, res, next) => {
     if (!user) {
       return next(new ApiError(401, "User not found with the token"));
     }
-
+    
     if (user.isPasswordChangedAfterJWT(result.iat)) {
       return next(new ApiError(401, "User recently changed password"));
     }

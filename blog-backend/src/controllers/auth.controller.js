@@ -3,7 +3,10 @@ import { asyncHandler, ApiResponce, ApiError} from '../utils/index.js'
 import crypto from "crypto";
 import sendEmail from "../services/emailSender.js"
 
+
+
 const createSendToken = async (user, statusCode, message, res) => {
+
   const token = await user.generateAccessToken();
 
   const options = {
@@ -90,6 +93,8 @@ const signUpUser = asyncHandler(async (req, res, next) => {
   createSendToken(userCreated, 200, "user signed up successfully", res);
 });
 
+
+// Logout User
 const logout = asyncHandler(async (req, res) => {
   res.status(200).clearCookie("token").send("User log out successfully");
 });

@@ -1,15 +1,20 @@
 import {Router} from "express"
-import {createBlog, getAllBlogs, getUserBlogs , updateBlog, deleteBlog} from "../controllers/blog.controller.js"
+import {createBlog, getAllBlogs, getUserBlogs , updateBlog, deleteBlog, createCategory} from "../controllers/blog.controller.js"
+import auth from "../middlewares/auth.middleware.js";
 
 
 const router = Router();
 
 
-router.post("/create", createBlog);
+router.post("/create", auth, createBlog);
 router.get("/", getAllBlogs);
-router.get("/user-blogs", getUserBlogs);
-router.patch("/:blogId", updateBlog);
-router.delete("/:blogId", deleteBlog);
+router.get("/user-blogs", auth, getUserBlogs);
+router.patch("/:blogId", auth, updateBlog);
+router.delete("/:blogId", auth, deleteBlog);
+
+
+router.post("/category", auth, createCategory);
+
 
 
 export default router;
