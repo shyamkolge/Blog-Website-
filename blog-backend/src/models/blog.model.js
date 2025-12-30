@@ -1,4 +1,4 @@
-import mongoose, { Mongoose } from 'mongoose';
+import mongoose from 'mongoose';
 
 const blogSchema = new mongoose.Schema({
   
@@ -24,13 +24,13 @@ const blogSchema = new mongoose.Schema({
         default: 'public',
     },
     author: {
-        type: Mongoose.Schema.Types.ObjectId,
-        ref: 'User',
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'user',
     },
     category: {
         type: mongoose.Schema.Types.ObjectId,
         required: true,
-        ref: 'BlogCategories'
+        ref: 'blogCategories'
     },
     likeCount: {
         type: Number,
