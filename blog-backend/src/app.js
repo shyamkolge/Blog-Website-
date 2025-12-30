@@ -17,4 +17,10 @@ app.get('/', (req, res) => {
 app.use("/api/v1/auth", authRoutes);
 
 
+// Blog routes
+import blogRoutes from './routes/blog.routes.js';
+app.use("/api/v1/blogs", blogRoutes);
+
+
+
 export default app;
