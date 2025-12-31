@@ -3,13 +3,14 @@ import { loginUser, resetPassword, signUpUser, logout, updatePassword, forgotPas
 import {loginSchema, forgotPasswordSchema, signupSchema, updatePasswordSchema, resetPasswordSchema } from '../utils/auth/authValidator.js'
 import { validate } from '../middlewares/inputValidate.js';
 import isLoggedIn from '../middlewares/auth.middleware.js';
+import upload from '../middlewares/multer.middleware.js';
 
 const router = Router();
 
 // Login and sign up
 router.get("/me", isLoggedIn, getMe);
 router.post("/login", validate(loginSchema), loginUser);
-router.post("/sign-up", validate(signupSchema), signUpUser);
+router.post("/sign-up", upload.single("profileImage"), validate(signupSchema), signUpUser);
 router.get("/log-out", logout);
 
 // Update Password

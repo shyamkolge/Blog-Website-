@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import useAuth from '../../hooks/useAuth'
+import useAuth from "../../hooks/useAuth";
+import { Profiler } from "react";
 
 export default function Signup() {
   const navigate = useNavigate();
@@ -11,6 +12,7 @@ export default function Signup() {
   const [error, setError] = useState("");
 
   const [formData, setFormData] = useState({
+    profileImage: "",
     username: "",
     firstName: "",
     lastName: "",
@@ -32,8 +34,15 @@ export default function Signup() {
     setLoading(true);
 
     try {
-      const data = await register(formData);
-      console.log(data);    
+      const form = new FormData();
+
+      Object.keys(formData).forEach((key) => {
+        if (formData[key]) {
+          form.append(key, formData[key]);
+        }
+      });
+
+      const data = await register(form);
       setLoading(false);
       navigate("/profile");
     } catch (error) {
@@ -49,7 +58,6 @@ export default function Signup() {
           Create Your Account
         </h2>
 
-        
         {error && (
           <p className="text-red-500 text-sm mb-3 text-center">{error}</p>
         )}
@@ -125,12 +133,19 @@ export default function Signup() {
           {/* Profile Photo (optional) */}
           <input
             type="file"
+            name="profileImage"
             accept="image/*"
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                profileImage: e.target.files[0], // ✅ store FILE object
+              })
+            }
             className="w-full p-2 border rounded text-sm"
           />
 
           {/* Submit */}
-           <button
+          <button
             type="submit"
             disabled={loading}
             className="w-full bg-black text-white py-3 rounded"

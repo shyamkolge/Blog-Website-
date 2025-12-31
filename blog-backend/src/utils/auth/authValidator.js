@@ -9,7 +9,7 @@ const passwordRules = Joi.string().min(6).required().messages({
 // Signup Validator
 export const signupSchema = Joi.object({
 
-  profilePhoto: Joi.string().optional().messages({
+  profileImage: Joi.any().optional().messages({
     "string.uri": "Profile photo must be a valid URL",
   }),
 

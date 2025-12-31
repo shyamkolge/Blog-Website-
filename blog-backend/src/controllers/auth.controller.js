@@ -2,6 +2,7 @@ import { userModel } from "../models/user.model.js";
 import { asyncHandler, ApiResponce, ApiError} from '../utils/index.js'
 import crypto from "crypto";
 import sendEmail from "../services/emailSender.js"
+import uploadOnCloudinary from "../services/cloudinary.js"
 
 
 
@@ -55,8 +56,9 @@ const loginUser = asyncHandler(async (req, res, next) => {
 // Sign Up User
 const signUpUser = asyncHandler(async (req, res, next) => {
   // 1. get the data from the user
-  const { username, profilePhoto, firstName, lastName, age, email, password } = req.body;
+  const { username, firstName, lastName, age, email, password } = req.body;
 
+  
   // 2. check if the user exits
   const existingUser = await userModel.findOne({
     $or: [{ email }, { username }],
@@ -68,7 +70,22 @@ const signUpUser = asyncHandler(async (req, res, next) => {
 
   // 3. create the user
   const roles = req.body?.roles || "user";
+  
+  const profileImage = req.file ? req.file.path : undefined;
+  
+  let profilePhoto = "";
 
+  console.log(profileImage);
+  
+  if (profileImage) {
+    const uploadRes = await uploadOnCloudinary(profileImage);
+    console.log(uploadRes);
+    
+    if (uploadRes?.secure_url) {
+       profilePhoto = uploadRes.secure_url;
+    }
+  }
+  
   const user = await userModel.create({
     profilePhoto,
     firstName,
