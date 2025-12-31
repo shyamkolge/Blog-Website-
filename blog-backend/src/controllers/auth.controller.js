@@ -254,6 +254,15 @@ const updatePassword = asyncHandler(async (req, res, next) => {
   }
 });
 
+
+const getMe = asyncHandler(async (req, res, next) => {
+  const user = await userModel.findById(req.user._id).select("-password");
+  res.status(200).json({
+    status: "success",
+    data: user,
+  });
+});
+
 export {
   signUpUser,
   loginUser,
@@ -261,4 +270,5 @@ export {
   forgotPassword,
   resetPassword,
   updatePassword,
+  getMe
 };
