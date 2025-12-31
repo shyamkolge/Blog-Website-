@@ -1,11 +1,14 @@
-import HomePage from "./pages/home/HomePage"
+import Layout from "./components/Layout"
+import HomePage from "./pages/HomePage"
 
 function App() {
   
   return (
-    <div className="font-opensans">
-      <HomePage/>
-    </div>
+    <Layout>
+      <div className="font-opensans">
+        <HomePage/>
+      </div>
+    </Layout>
   )
 }
 
