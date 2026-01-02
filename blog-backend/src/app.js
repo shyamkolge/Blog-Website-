@@ -2,6 +2,7 @@ import express from 'express';
 import authRoutes from './routes/auth.routes.js';
 import cookieParser from 'cookie-parser';
 import cors from "cors";
+import globalErrorHandler from './middlewares/errorHandling.js';
 
 
 const app = express();
@@ -33,6 +34,7 @@ app.use("/api/v1/auth", authRoutes);
 import blogRoutes from './routes/blog.routes.js';
 app.use("/api/v1/blogs", blogRoutes);
 
-
+// Error handling middleware (must be last)
+app.use(globalErrorHandler);
 
 export default app;

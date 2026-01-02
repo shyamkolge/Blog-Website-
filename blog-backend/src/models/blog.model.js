@@ -30,7 +30,7 @@ const blogSchema = new mongoose.Schema({
     category: {
         type: mongoose.Schema.Types.ObjectId,
         required: true,
-        ref: 'blogCategories'
+        ref: 'BlogCategories'
     },
     likeCount: {
         type: Number,
