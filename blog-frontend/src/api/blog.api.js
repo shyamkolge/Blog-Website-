@@ -84,3 +84,14 @@ export const deleteCommentAPI = async (commentId) => {
   return response.data;
 };
 
+// Bookmark a blog 
+export const bookMarkAPI = async (blogId) => {
+  const response = await api.post(`/v1/blogs/${blogId}/bookmark`);
+  return response.data;
+};
+
+// Get bookmarked blogs
+export const getBookMarkedPostsAPI = async () => {
+  const response = await api.get("/v1/blogs/bookMarked");
+  return response.data;
+};
