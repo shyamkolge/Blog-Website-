@@ -50,6 +50,13 @@ const userSchema = new mongoose.Schema(
       minlength: 6,
     },
 
+    bookmarkedBlogs: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Blog"
+      }
+    ],
+
     passwordChangedAt: {
       type: Date,
     },

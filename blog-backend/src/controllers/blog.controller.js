@@ -4,6 +4,7 @@ import BlogCategoryController from "../models/blog.categories.model.js";
 import likeModel from "../models/blog.like.model.js";
 import commentModel from "../models/blog.comments.model.js";
 import uploadOnCloudinary from "../services/cloudinary.js";
+import { userModel } from "../models/user.model.js";
 
 // Create blog
 const createBlog = asyncHandler(async (req, res) => {
@@ -149,24 +150,6 @@ const getBlogBySlug = asyncHandler(async (req, res) => {
 });
 
 
-
-// Category Controller
-const createCategory = asyncHandler(async (req, res) => {
-  const { name, slug } = req.body;
-
-  const category = await BlogCategoryController.create({
-    name,
-    slug,
-  });
-
-  return res.json(new ApiResponce(201, category, "Category created successfully"));
-});
-
-// Get all categories
-const getAllCategories = asyncHandler(async (req, res) => {
-  const categories = await BlogCategoryController.find().sort({ name: 1 });
-  return res.json(new ApiResponce(200, categories, "Categories fetched successfully"));
-});
 
 // Get user's liked posts
 const getUserLikedPosts = asyncHandler(async (req, res) => {
@@ -334,6 +317,62 @@ const deleteComment = asyncHandler(async (req, res) => {
 });
 
 
+// Bookmark/Unbookmark a blog
+const bookmarkBlog = asyncHandler(async (req, res) => {
+  const { blogId } = req.params;
+  const userId = req?.user._id;
+
+  if (!userId) {
+    throw new ApiError(401, "Please log in to bookmark blogs");
+  }
+
+  const blog = await blogModel.findById(blogId);
+  if (!blog) {
+    throw new ApiError(404, "Blog not found");
+  }
+
+  const user = await userModel.findById(userId);
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  // Check if blog is already bookmarked
+  const isBookmarked = user.bookmarkedBlogs.some(
+    (id) => id.toString() === blogId.toString()
+  );
+
+  if (isBookmarked) {
+    // Unbookmark - remove from array
+    user.bookmarkedBlogs = user.bookmarkedBlogs.filter(
+      (id) => id.toString() !== blogId.toString()
+    );
+    await user.save();
+    return res.json(new ApiResponce(200, { bookmarked: false }, "Blog unbookmarked successfully"));
+  } else {
+    // Bookmark - add to array
+    user.bookmarkedBlogs.push(blogId);
+    await user.save();
+    return res.json(new ApiResponce(200, { bookmarked: true }, "Blog bookmarked successfully"));
+  }
+});
+
+
+// get the bookmarked blogs
+const getBookmarkedBlogs = asyncHandler(async (req, res) => {
+  const userId = req?.user._id;
+  const user = await userModel.findById(userId);
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+  const bookmarkedBlogs = await blogModel.find({ _id: { $in: user.bookmarkedBlogs } })
+    .populate('author', 'firstName lastName username profilePhoto email')
+    .populate('category', 'name slug')
+    .sort({ createdAt: -1 });
+  
+  return res.json(new ApiResponce(200, bookmarkedBlogs, "Bookmarked blogs fetched successfully"));
+});
+
+
 export { 
   createBlog, 
   deleteBlog, 
@@ -341,13 +380,13 @@ export {
   getUserBlogs, 
   getAllBlogs,
   getBlogBySlug,
-  createCategory,
-  getAllCategories,
   getUserLikedPosts,
   getUserComments,
   toggleLike,
   checkUserLiked,
   addComment,
   getBlogComments,
-  deleteComment
+  deleteComment,
+  getBookmarkedBlogs,
+  bookmarkBlog
 };
