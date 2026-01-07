@@ -13,7 +13,8 @@ import {
   FiCamera,
   FiMusic,
   FiZap,
-  FiEdit3
+  FiEdit3,
+  FiGlobe
 } from 'react-icons/fi'
 import useAuth from '../../hooks/useAuth'
 
@@ -28,7 +29,7 @@ const SideBar = ({ onNavigate }) => {
   }
 
   const handleCategoryClick = (category) => {
-    navigate(`/category/${category.toLowerCase().replace(/\s+/g, '-')}`)
+    navigate(`/category/${category}`)
     if (onNavigate) onNavigate()
   }
 
@@ -42,6 +43,7 @@ const SideBar = ({ onNavigate }) => {
   const categories = [
     { name: 'Technology', icon: FiZap, slug: 'technology' },
     { name: 'Programming', icon: FiCode, slug: 'programming' },
+    { name: 'Web Development', icon: FiGlobe, slug: 'web-development' },
     { name: 'Design', icon: FiImage, slug: 'design' },
     { name: 'Business', icon: FiBriefcase, slug: 'business' },
     { name: 'Lifestyle', icon: FiHeart, slug: 'lifestyle' },
@@ -91,7 +93,7 @@ const SideBar = ({ onNavigate }) => {
             return (
               <button
                 key={category.slug}
-                onClick={() => handleCategoryClick(category.name)}
+                onClick={() => handleCategoryClick(category.slug)}
                 className="w-full flex items-center space-x-3 px-4 py-2.5 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition"
               >
                 <Icon className="w-4 h-4 text-gray-500 dark:text-gray-400" />
