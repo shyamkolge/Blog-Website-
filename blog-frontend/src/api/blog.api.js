@@ -95,3 +95,10 @@ export const getBookMarkedPostsAPI = async () => {
   const response = await api.get("/v1/blogs/bookMarked");
   return response.data;
 };
+
+
+// Create category
+export const getBlogsByCategoryAPI = async (slug) => {
+   const response = await api.get(`/v1/blogs/categories/${slug}`);
+   return response.data;
+}

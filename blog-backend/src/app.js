@@ -1,10 +1,14 @@
 import express from 'express';
-import authRoutes from './routes/auth.routes.js';
 import cookieParser from 'cookie-parser';
 import cors from "cors";
 import globalErrorHandler from './middlewares/errorHandling.js';
 import session from 'express-session';
 import passport from './config/passport.js';
+
+// Routes imports
+import authRoutes from './routes/auth.routes.js';
+import blogRoutes from './routes/blog.routes.js';
+import followRoutes from './routes/connection.routes.js';
 
 
 const app = express();
@@ -25,11 +29,11 @@ app.use(cookieParser());
 // Session configuration for Passport (needed for OAuth flow)
 app.use(
   session({
-    secret: process.env.SESSION_SECRET || "your-secret-key-change-in-production",
+    secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: process.env.NODE_ENV === "production",
+      secure: true,
       httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
       sameSite: "lax",
@@ -50,10 +54,13 @@ app.get('/', (req, res) => {
 // Authentication routes
 app.use("/api/v1/auth", authRoutes);
 
-
 // Blog routes
-import blogRoutes from './routes/blog.routes.js';
 app.use("/api/v1/blogs", blogRoutes);
+
+// Follow User 
+app.use("/api/v1/connections", followRoutes);
+
+app.ge
 
 // Error handling middleware (must be last)
 app.use(globalErrorHandler);

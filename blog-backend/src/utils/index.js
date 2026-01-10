@@ -1,10 +1,10 @@
 import ApiError from "./ApiError.js";
-import ApiResponce from "./ApiResponce.js";
+import ApiResponse from "./ApiResponse.js";
 import asyncHandler from "./asyncHandler.js";
 
 
 export{
-    ApiResponce,
+    ApiResponse,
     ApiError,  
     asyncHandler
 }

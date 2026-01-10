@@ -1,5 +1,5 @@
 import { v2 as cloudinary } from "cloudinary";
-import fs from "fs"
+import streamifier from "streamifier";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -10,21 +10,18 @@ cloudinary.config({
     api_secret: process.env.CLOUDINARY_API_SECRET,
   });
 
-const uploadOnCloudinary = async (localFilePath) => {
+const uploadOnCloudinary = async (fileBuffer) => {
 
-    try {
-        if (!localFilePath) return null
-        // Upload file on cloudinary 
-        const response =  await cloudinary.uploader.upload(localFilePath , {resource_type : "auto"});
-        
-        fs.unlinkSync(localFilePath);
-        return response;
-        
-    } catch (error) {
-        fs.unlinkSync(localFilePath); 
-        console.log("Cloudinary : ", error);
-        return null    
-    }
+    return new Promise((resolve , reject)=>{
+        const  upload_stream = cloudinary.uploader.upload_stream(
+            { folder: "blog_profiles" },
+            (error, result) => {    
+                 if (error) return reject(error);
+                 resolve(result);
+            }
+        );
+        streamifier.createReadStream(fileBuffer).pipe(upload_stream);
+    });
 }
 
 export default uploadOnCloudinary;

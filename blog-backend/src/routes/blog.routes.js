@@ -16,10 +16,12 @@ import {
   bookmarkBlog,
   getBookmarkedBlogs
 } from "../controllers/blog.controller.js"
-import { createCategory, getAllCategories } from "../controllers/categories.controller.js";
 import isLoggedIn from "../middlewares/auth.middleware.js";
 import optionalAuth from "../middlewares/optionalAuth.middleware.js";
 import upload from "../middlewares/multer.middleware.js";
+
+// Category Controller import
+import { createCategory, getAllCategories, getBlogsByCategory } from "../controllers/categories.controller.js";
 
 
 const router = Router();
@@ -27,6 +29,7 @@ const router = Router();
 // Access control routes
 router.get("/", getAllBlogs);
 router.get("/categories", getAllCategories);
+router.get("/categories/:slug", getBlogsByCategory);
 router.get("/slug/:slug", getBlogBySlug);
 router.get("/user-blogs", isLoggedIn, getUserBlogs);
 router.get("/liked-posts", isLoggedIn, getUserLikedPosts);
