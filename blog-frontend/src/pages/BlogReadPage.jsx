@@ -1,14 +1,20 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { 
-  getBlogBySlugAPI, 
-  toggleLikeAPI, 
+import {
+  getBlogBySlugAPI,
+  toggleLikeAPI,
   checkUserLikedAPI,
   addCommentAPI,
   getBlogCommentsAPI,
   deleteCommentAPI,
-  bookMarkAPI
+  bookMarkAPI,
 } from "../api/blog.api";
+import {
+  followUserAPI,
+  unfollowUserAPI,
+  checkUserFollowAPI,
+} from "../api/connection.api";
+
 import useAuth from "../hooks/useAuth";
 import { useToast } from "../context/ToastContext";
 import {
@@ -40,35 +46,45 @@ const BlogReadPage = () => {
   const [loadingComments, setLoadingComments] = useState(false);
   const [newComment, setNewComment] = useState("");
   const [submittingComment, setSubmittingComment] = useState(false);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const isOwnBlog = user && blog?.author?._id === user?._id;
+
 
   useEffect(() => {
     fetchBlog();
   }, [slug]);
 
   useEffect(() => {
-    if (blog && user) {
-      checkLikeStatus();
-      checkBookmarkStatus();
-    }
-    if (blog) {
-      fetchComments();
-    }
-    
+    if (!blog) return;
+    fetchComments();
+  }, [blog]);
+
+  useEffect(() => {
+    if (!blog || !user) return;
+    checkLikeStatus();
+    checkBookmarkStatus();
+    checkFollowingStatus();
+
     // Scroll to comments section if hash is present
-    if (window.location.hash === '#comments') {
+    if (window.location.hash === "#comments") {
       setTimeout(() => {
-        const commentsSection = document.getElementById('comments-section');
+        const commentsSection = document.getElementById("comments-section");
         if (commentsSection) {
-          commentsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          commentsSection.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
         }
       }, 500);
     }
   }, [blog, user]);
 
+  // Fetching the blog data
   const fetchBlog = async () => {
     try {
       setLoading(true);
       const response = await getBlogBySlugAPI(slug);
+
       if (response.success) {
         setBlog(response.data);
       }
@@ -79,6 +95,7 @@ const BlogReadPage = () => {
     }
   };
 
+  // Check if the user has liked the blog
   const checkLikeStatus = async () => {
     if (!blog) return;
     try {
@@ -91,6 +108,7 @@ const BlogReadPage = () => {
     }
   };
 
+  // Check if the user has bookmarked the blog
   const checkBookmarkStatus = () => {
     if (!blog || !user || !user.bookmarkedBlogs) {
       setIsBookmarked(false);
@@ -102,6 +120,20 @@ const BlogReadPage = () => {
     setIsBookmarked(bookmarked);
   };
 
+  const checkFollowingStatus = async () => {
+    if (!blog || !user) {
+      setIsFollowing(false);
+      return;
+    }
+    const isFollow = await checkUserFollowAPI(blog.author._id);
+    if (isFollow.success) {
+      setIsFollowing(isFollow.data.isFollowing);
+    } else {
+      setIsFollowing(false);
+    }
+  };
+
+  // Handle like button click
   const handleLike = async () => {
     if (!user) {
       toast.warning("Please log in to like blogs");
@@ -114,9 +146,9 @@ const BlogReadPage = () => {
       const response = await toggleLikeAPI(blog._id);
       if (response.success) {
         setIsLiked(response.data.liked);
-        setBlog(prev => ({
+        setBlog((prev) => ({
           ...prev,
-          likeCount: response.data.likeCount
+          likeCount: response.data.likeCount,
         }));
       }
     } catch (err) {
@@ -127,6 +159,7 @@ const BlogReadPage = () => {
     }
   };
 
+  // Handle bookmark button click
   const handleBookmark = async () => {
     if (!user) {
       toast.warning("Please log in to bookmark blogs");
@@ -138,7 +171,10 @@ const BlogReadPage = () => {
     try {
       const response = await bookMarkAPI(blog._id);
       if (response.success || response.status === "success") {
-        const bookmarked = response.data?.bookmarked ?? response.data?.isBookmarked ?? !isBookmarked;
+        const bookmarked =
+          response.data?.bookmarked ??
+          response.data?.isBookmarked ??
+          !isBookmarked;
         setIsBookmarked(bookmarked);
         toast.success(bookmarked ? "Blog bookmarked!" : "Blog unbookmarked");
       }
@@ -150,6 +186,7 @@ const BlogReadPage = () => {
     }
   };
 
+  // Fetch comments for the blog
   const fetchComments = async () => {
     if (!blog) return;
     setLoadingComments(true);
@@ -165,6 +202,7 @@ const BlogReadPage = () => {
     }
   };
 
+  // Handle adding a new comment
   const handleAddComment = async (e) => {
     e.preventDefault();
     if (!user) {
@@ -182,11 +220,11 @@ const BlogReadPage = () => {
     try {
       const response = await addCommentAPI(blog._id, newComment);
       if (response.success) {
-        setComments(prev => [response.data, ...prev]);
+        setComments((prev) => [response.data, ...prev]);
         setNewComment("");
-        setBlog(prev => ({
+        setBlog((prev) => ({
           ...prev,
-          commentCount: (prev.commentCount || 0) + 1
+          commentCount: (prev.commentCount || 0) + 1,
         }));
         toast.success("Comment added successfully!");
       }
@@ -198,6 +236,7 @@ const BlogReadPage = () => {
     }
   };
 
+  // Handle deleting a comment
   const handleDeleteComment = async (commentId) => {
     if (!window.confirm("Are you sure you want to delete this comment?")) {
       return;
@@ -206,10 +245,12 @@ const BlogReadPage = () => {
     try {
       const response = await deleteCommentAPI(commentId);
       if (response.success) {
-        setComments(prev => prev.filter(comment => comment._id !== commentId));
-        setBlog(prev => ({
+        setComments((prev) =>
+          prev.filter((comment) => comment._id !== commentId)
+        );
+        setBlog((prev) => ({
           ...prev,
-          commentCount: Math.max(0, (prev.commentCount || 0) - 1)
+          commentCount: Math.max(0, (prev.commentCount || 0) - 1),
         }));
         toast.success("Comment deleted successfully");
       }
@@ -219,9 +260,10 @@ const BlogReadPage = () => {
     }
   };
 
+  //  Handle share button click
   const handleShare = async () => {
     if (!blog) return;
-    
+
     const blogUrl = `${window.location.origin}/blog/${blog.slug}`;
     const shareData = {
       title: blog.tittle,
@@ -230,7 +272,11 @@ const BlogReadPage = () => {
     };
 
     try {
-      if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+      if (
+        navigator.share &&
+        navigator.canShare &&
+        navigator.canShare(shareData)
+      ) {
         await navigator.share(shareData);
       } else {
         try {
@@ -241,7 +287,7 @@ const BlogReadPage = () => {
         }
       }
     } catch (err) {
-      if (err.name !== 'AbortError') {
+      if (err.name !== "AbortError") {
         try {
           await navigator.clipboard.writeText(blogUrl);
           toast.success("Link copied to clipboard!");
@@ -253,6 +299,7 @@ const BlogReadPage = () => {
     }
   };
 
+  // Format date to a readable format
   const formatDate = (dateString) => {
     if (!dateString) return "";
     const date = new Date(dateString);
@@ -263,23 +310,49 @@ const BlogReadPage = () => {
     });
   };
 
+  // Estimate reading time based on word count
   const getReadingTime = (content) => {
     if (!content) return "1 min read";
     // Strip HTML tags for accurate word count
     const stripHtmlTags = (html) => {
-      if (!html) return '';
-      if (typeof document === 'undefined') {
-        return html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
+      if (!html) return "";
+      if (typeof document === "undefined") {
+        return html
+          .replace(/<[^>]*>/g, "")
+          .replace(/&nbsp;/g, " ")
+          .trim();
       }
-      const div = document.createElement('div');
+      const div = document.createElement("div");
       div.innerHTML = html;
-      return (div.textContent || div.innerText || '').trim();
+      return (div.textContent || div.innerText || "").trim();
     };
     const plainText = stripHtmlTags(content);
     const wordsPerMinute = 200;
     const wordCount = plainText.split(/\s+/).length;
     const readingTime = Math.ceil(wordCount / wordsPerMinute);
     return `${readingTime} min read`;
+  };
+
+  // Handle the follow to the author
+  const handleFollow = async () => {
+    if (!user) {
+      toast.warning("Please log in to follow authors");
+      navigate("/login");
+      return;
+    }
+
+    try {
+      if (isFollowing) {
+        await unfollowUserAPI(blog.author._id);
+        setIsFollowing(false);
+      } else {
+        await followUserAPI(blog.author._id);
+        setIsFollowing(true);
+      }
+    } catch (error) {
+      console.log(error);
+      toast.error("Failed to update follow status");
+    }
   };
 
   if (loading) {
@@ -297,7 +370,9 @@ const BlogReadPage = () => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-900">
         <div className="text-center">
-          <p className="text-red-600 dark:text-red-400 mb-4">{error || "Blog not found"}</p>
+          <p className="text-red-600 dark:text-red-400 mb-4">
+            {error || "Blog not found"}
+          </p>
           <button
             onClick={() => navigate("/")}
             className="px-4 py-2 bg-black dark:bg-white text-white dark:text-black rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 transition"
@@ -340,15 +415,27 @@ const BlogReadPage = () => {
                 <FiUser className="w-6 h-6 text-gray-600 dark:text-gray-300" />
               </div>
             )}
-            <div>
-              <p className="font-semibold text-gray-900 dark:text-white">
-                {blog.author?.firstName} {blog.author?.lastName}
-              </p>
-              <div className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
-                <span>{formatDate(blog.createdAt)}</span>
-                <span>·</span>
-                <span>{getReadingTime(blog.content)}</span>
+            <div className="flex-1 flex items-center justify-between">
+              <div>
+                <p className="font-semibold text-gray-900 dark:text-white">
+                  {blog.author?.firstName} {blog.author?.lastName}
+                </p>
+                <div className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
+                  <span>{formatDate(blog.createdAt)}</span>
+                  <span>·</span>
+                  <span>{getReadingTime(blog.content)}</span>
+                </div>
               </div>
+              {/* Follow button  */}
+              {
+                !isOwnBlog &&(
+                <button
+                onClick={() => handleFollow()}
+                className="px-3 py-1.5 text-sm sm:px-3.5 sm:py-2 lg:px-4 lg:py-1.5 lg:text-base bg-black dark:bg-white text-white dark:text-black font-semibold rounded-full hover:bg-gray-800 dark:hover:bg-gray-200 transition"
+              >
+                {isFollowing ? "Following" : "Follow"}
+              </button>
+              )}
             </div>
           </div>
         </div>
@@ -381,33 +468,45 @@ const BlogReadPage = () => {
         <div className="border-t border-gray-200 dark:border-gray-800 pt-8 mb-12">
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div className="flex items-center space-x-6">
-              <button 
+              <button
                 onClick={handleLike}
                 disabled={liking || !user}
                 className={`flex items-center space-x-2 transition-colors ${
-                  isLiked 
-                    ? 'text-red-600 dark:text-red-400' 
-                    : 'text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400'
-                } ${!user ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                  isLiked
+                    ? "text-red-600 dark:text-red-400"
+                    : "text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400"
+                } ${
+                  !user ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+                }`}
               >
                 {liking ? (
                   <FiLoader className="w-5 h-5 animate-spin" />
                 ) : (
-                  <FiHeart className={`w-5 h-5 ${isLiked ? 'fill-current' : ''}`} />
+                  <FiHeart
+                    className={`w-5 h-5 ${isLiked ? "fill-current" : ""}`}
+                  />
                 )}
-                <span className="text-sm font-medium">{blog.likeCount || 0}</span>
+                <span className="text-sm font-medium">
+                  {blog.likeCount || 0}
+                </span>
               </button>
               <button
                 onClick={() => {
-                  const commentsSection = document.getElementById('comments-section');
+                  const commentsSection =
+                    document.getElementById("comments-section");
                   if (commentsSection) {
-                    commentsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    commentsSection.scrollIntoView({
+                      behavior: "smooth",
+                      block: "start",
+                    });
                   }
                 }}
                 className="flex items-center space-x-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
               >
                 <FiMessageCircle className="w-5 h-5" />
-                <span className="text-sm font-medium">{blog.commentCount || 0}</span>
+                <span className="text-sm font-medium">
+                  {blog.commentCount || 0}
+                </span>
               </button>
               <button
                 onClick={handleShare}
@@ -421,15 +520,21 @@ const BlogReadPage = () => {
                   onClick={handleBookmark}
                   disabled={bookmarking}
                   className={`flex items-center space-x-2 transition-colors ${
-                    isBookmarked 
-                      ? 'text-yellow-600 dark:text-yellow-400' 
-                      : 'text-gray-600 dark:text-gray-400 hover:text-yellow-600 dark:hover:text-yellow-400'
-                  } ${!user ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                    isBookmarked
+                      ? "text-yellow-600 dark:text-yellow-400"
+                      : "text-gray-600 dark:text-gray-400 hover:text-yellow-600 dark:hover:text-yellow-400"
+                  } ${
+                    !user ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+                  }`}
                 >
                   {bookmarking ? (
                     <FiLoader className="w-5 h-5 animate-spin" />
                   ) : (
-                    <FiBookmark className={`w-5 h-5 ${isBookmarked ? 'fill-current' : ''}`} />
+                    <FiBookmark
+                      className={`w-5 h-5 ${
+                        isBookmarked ? "fill-current" : ""
+                      }`}
+                    />
                   )}
                 </button>
               )}
@@ -438,7 +543,7 @@ const BlogReadPage = () => {
         </div>
 
         {/* Author Card */}
-        <div className="border-t border-gray-200 dark:border-gray-800 pt-8 mb-12">
+        {/* <div className="border-t border-gray-200 dark:border-gray-800 pt-8 mb-12">
           <div className="flex items-center space-x-4">
             {blog.author?.profilePhoto ? (
               <img
@@ -455,15 +560,22 @@ const BlogReadPage = () => {
               <p className="font-semibold text-lg text-gray-900 dark:text-white">
                 {blog.author?.firstName} {blog.author?.lastName}
               </p>
-              <p className="text-sm text-gray-600 dark:text-gray-400">@{blog.author?.username}</p>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{blog.author?.email}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                @{blog.author?.username}
+              </p>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                {blog.author?.email}
+              </p>
             </div>
           </div>
-        </div>
+        </div> */}
       </article>
 
       {/* Comments Section */}
-      <div id="comments-section" className="border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+      <div
+        id="comments-section"
+        className="border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900"
+      >
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
           <div className="mb-8">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
@@ -522,7 +634,9 @@ const BlogReadPage = () => {
             </form>
           ) : (
             <div className="mb-12 p-6 border border-gray-200 dark:border-gray-700 rounded-lg text-center">
-              <p className="text-gray-700 dark:text-gray-300 mb-4">Sign in to leave a response</p>
+              <p className="text-gray-700 dark:text-gray-300 mb-4">
+                Sign in to leave a response
+              </p>
               <button
                 onClick={() => navigate("/login")}
                 className="px-6 py-2 bg-black dark:bg-white text-white dark:text-black rounded-full hover:bg-gray-800 dark:hover:bg-gray-200 transition font-medium"
@@ -539,7 +653,9 @@ const BlogReadPage = () => {
             </div>
           ) : comments.length === 0 ? (
             <div className="text-center py-12">
-              <p className="text-gray-500 dark:text-gray-400">No responses yet. Be the first to share your thoughts!</p>
+              <p className="text-gray-500 dark:text-gray-400">
+                No responses yet. Be the first to share your thoughts!
+              </p>
             </div>
           ) : (
             <div className="space-y-8">

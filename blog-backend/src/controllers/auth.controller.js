@@ -1,5 +1,5 @@
 import { userModel } from "../models/user.model.js";
-import { asyncHandler, ApiResponce, ApiError} from '../utils/index.js'
+import { asyncHandler, ApiResponse, ApiError} from '../utils/index.js'
 import crypto from "crypto";
 import sendEmail from "../services/emailSender.js"
 import uploadOnCloudinary from "../services/cloudinary.js"
