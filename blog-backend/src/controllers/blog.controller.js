@@ -1,5 +1,5 @@
 import blogModel from "../models/blog.model.js";
-import { asyncHandler, ApiError, ApiResponce } from "../utils/index.js";
+import { asyncHandler, ApiError, ApiResponse } from "../utils/index.js";
 import BlogCategoryController from "../models/blog.categories.model.js";
 import likeModel from "../models/blog.like.model.js";
 import commentModel from "../models/blog.comments.model.js";
@@ -59,7 +59,7 @@ const deleteBlog = asyncHandler(async (req, res) => {
 
   await blogModel.findByIdAndDelete(blogId);
 
-  return res.json(new ApiResponce(200, null,"Blog deleted successfully"));
+  return res.json(new ApiResponse(200, null,"Blog deleted successfully"));
 });
 
 // Update blog
@@ -84,7 +84,7 @@ const updateBlog = asyncHandler(async (req, res) => {
 
   await blog.save();
 
-  return res.json(new ApiResponce(200, blog, "Blog updated successfully"));
+  return res.json(new ApiResponse(200, blog, "Blog updated successfully"));
 });
 
 // Get usr blog
@@ -94,7 +94,7 @@ const getUserBlogs = asyncHandler(async (req, res) => {
     .populate('author', 'firstName lastName username profilePhoto email')
     .populate('category', 'name slug')
     .sort({ createdAt: -1 });
-  return res.json(new ApiResponce(200, blogs, "User Blogs fetched successfully"));
+  return res.json(new ApiResponse(200, blogs, "User Blogs fetched successfully"));
 });
 
 
@@ -104,7 +104,7 @@ const getAllBlogs = asyncHandler(async (req, res) => {
     .populate('author', 'firstName lastName username profilePhoto email')
     .populate('category', 'name slug')
     .sort({ createdAt: -1 });
-  return res.json(new ApiResponce(200, blogs, "Blogs fetched successfully"));
+  return res.json(new ApiResponse(200, blogs, "Blogs fetched successfully"));
 });
 
 // Get single blog by slug
@@ -146,7 +146,7 @@ const getBlogBySlug = asyncHandler(async (req, res) => {
     });
   }
 
-  return res.json(new ApiResponce(200, blog, "Blog fetched successfully"));
+  return res.json(new ApiResponse(200, blog, "Blog fetched successfully"));
 });
 
 
@@ -169,7 +169,7 @@ const getUserLikedPosts = asyncHandler(async (req, res) => {
     .filter(like => like.postId !== null)
     .map(like => like.postId);
 
-  return res.json(new ApiResponce(200, likedPosts, "User liked posts fetched successfully"));
+  return res.json(new ApiResponse(200, likedPosts, "User liked posts fetched successfully"));
 });
 
 // Get user's comments
@@ -187,7 +187,7 @@ const getUserComments = asyncHandler(async (req, res) => {
     .populate('user', 'firstName lastName username profilePhoto')
     .sort({ createdAt: -1 });
 
-  return res.json(new ApiResponce(200, comments, "User comments fetched successfully"));
+  return res.json(new ApiResponse(200, comments, "User comments fetched successfully"));
 });
 
 // Like/Unlike a blog
@@ -213,14 +213,14 @@ const toggleLike = asyncHandler(async (req, res) => {
     blog.likeCount = Math.max(0, (blog.likeCount || 0) - 1);
     await blog.save();
     
-    return res.json(new ApiResponce(200, { liked: false, likeCount: blog.likeCount }, "Blog unliked successfully"));
+    return res.json(new ApiResponse(200, { liked: false, likeCount: blog.likeCount }, "Blog unliked successfully"));
   } else {
     // Like - add the like
     await likeModel.create({ postId: blogId, user: userId });
     blog.likeCount = (blog.likeCount || 0) + 1;
     await blog.save();
     
-    return res.json(new ApiResponce(200, { liked: true, likeCount: blog.likeCount }, "Blog liked successfully"));
+    return res.json(new ApiResponse(200, { liked: true, likeCount: blog.likeCount }, "Blog liked successfully"));
   }
 });
 
@@ -230,11 +230,11 @@ const checkUserLiked = asyncHandler(async (req, res) => {
   const userId = req?.user?._id;
 
   if (!userId) {
-    return res.json(new ApiResponce(200, { liked: false }, "User not logged in"));
+    return res.json(new ApiResponse(200, { liked: false }, "User not logged in"));
   }
 
   const like = await likeModel.findOne({ postId: blogId, user: userId });
-  return res.json(new ApiResponce(200, { liked: !!like }, "Like status fetched successfully"));
+  return res.json(new ApiResponse(200, { liked: !!like }, "Like status fetched successfully"));
 });
 
 // Add a comment to a blog
@@ -271,7 +271,7 @@ const addComment = asyncHandler(async (req, res) => {
   const populatedComment = await commentModel.findById(comment._id)
     .populate('user', 'firstName lastName username profilePhoto');
 
-  return res.json(new ApiResponce(201, populatedComment, "Comment added successfully"));
+  return res.json(new ApiResponse(201, populatedComment, "Comment added successfully"));
 });
 
 // Get comments for a blog
@@ -282,7 +282,7 @@ const getBlogComments = asyncHandler(async (req, res) => {
     .populate('user', 'firstName lastName username profilePhoto')
     .sort({ createdAt: -1 });
 
-  return res.json(new ApiResponce(200, comments, "Comments fetched successfully"));
+  return res.json(new ApiResponse(200, comments, "Comments fetched successfully"));
 });
 
 // Delete a comment
@@ -313,7 +313,7 @@ const deleteComment = asyncHandler(async (req, res) => {
 
   await commentModel.findByIdAndDelete(commentId);
 
-  return res.json(new ApiResponce(200, null, "Comment deleted successfully"));
+  return res.json(new ApiResponse(200, null, "Comment deleted successfully"));
 });
 
 
@@ -347,12 +347,12 @@ const bookmarkBlog = asyncHandler(async (req, res) => {
       (id) => id.toString() !== blogId.toString()
     );
     await user.save();
-    return res.json(new ApiResponce(200, { bookmarked: false }, "Blog unbookmarked successfully"));
+    return res.json(new ApiResponse(200, { bookmarked: false }, "Blog unbookmarked successfully"));
   } else {
     // Bookmark - add to array
     user.bookmarkedBlogs.push(blogId);
     await user.save();
-    return res.json(new ApiResponce(200, { bookmarked: true }, "Blog bookmarked successfully"));
+    return res.json(new ApiResponse(200, { bookmarked: true }, "Blog bookmarked successfully"));
   }
 });
 
@@ -369,7 +369,7 @@ const getBookmarkedBlogs = asyncHandler(async (req, res) => {
     .populate('category', 'name slug')
     .sort({ createdAt: -1 });
   
-  return res.json(new ApiResponce(200, bookmarkedBlogs, "Bookmarked blogs fetched successfully"));
+  return res.json(new ApiResponse(200, bookmarkedBlogs, "Bookmarked blogs fetched successfully"));
 });
 
 

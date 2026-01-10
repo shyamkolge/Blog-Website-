@@ -1,10 +1,14 @@
 import express from 'express';
-import authRoutes from './routes/auth.routes.js';
 import cookieParser from 'cookie-parser';
 import cors from "cors";
 import globalErrorHandler from './middlewares/errorHandling.js';
 import session from 'express-session';
 import passport from './config/passport.js';
+
+// Routes imports
+import authRoutes from './routes/auth.routes.js';
+import blogRoutes from './routes/blog.routes.js';
+import followRoutes from './routes/connection.routes.js';
 
 
 const app = express();
@@ -50,10 +54,13 @@ app.get('/', (req, res) => {
 // Authentication routes
 app.use("/api/v1/auth", authRoutes);
 
-
 // Blog routes
-import blogRoutes from './routes/blog.routes.js';
 app.use("/api/v1/blogs", blogRoutes);
+
+// Follow User 
+app.use("/api/v1/connections", followRoutes);
+
+app.ge
 
 // Error handling middleware (must be last)
 app.use(globalErrorHandler);
