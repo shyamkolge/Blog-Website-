@@ -113,8 +113,16 @@ const signUpUser = asyncHandler(async (req, res, next) => {
 
 // Logout User
 const logout = asyncHandler(async (req, res) => {
-  res.status(200).clearCookie("token").send("User log out successfully");
-});
+   res.clearCookie("token", {
+    httpOnly: true,
+    secure: true,    
+    sameSite: "None", 
+  });
+
+  return res.status(200).json(
+    new ApiResponse(200, "success", null, "User logged out successfully")
+  );
+})
 
 
 
