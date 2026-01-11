@@ -166,7 +166,7 @@ export default function Login() {
           <button
             type="button"
             onClick={() => {
-              window.location.href = `${import.meta.env.VITE_API_URL || "http://localhost:3000"}/api/v1/auth/google`;
+              window.location.href = `${import.meta.env.VITE_API_URL}/api/v1/auth/google`;
             }}
             className="w-full flex items-center justify-center space-x-3 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition font-medium"
           >

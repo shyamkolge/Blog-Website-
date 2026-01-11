@@ -43,7 +43,7 @@ router.get(
 router.get(
   "/google/callback",
   passport.authenticate("google", {
-    failureRedirect: `${process.env.FRONTEND_URL || "http://localhost:5173"}/login?error=google_auth_failed`,
+    failureRedirect: `${process.env.FRONTEND_URL}/login?error=google_auth_failed`,
     session: true, // Need session for OAuth flow
   }),
   googleCallback

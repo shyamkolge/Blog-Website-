@@ -282,6 +282,7 @@ const getMe = asyncHandler(async (req, res, next) => {
 
 // Google OAuth callback handler
 const googleCallback = asyncHandler(async (req, res, next) => {
+  
   if (!req.user) {
     return res.redirect(`${process.env.FRONTEND_URL}/login?error=google_auth_failed`);
   }

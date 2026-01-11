@@ -10,16 +10,14 @@ import authRoutes from './routes/auth.routes.js';
 import blogRoutes from './routes/blog.routes.js';
 import followRoutes from './routes/connection.routes.js';
 
-
 const app = express();
 
 app.use(
   cors({
-    origin: "https://blogwebsite-lime-delta.vercel.app",
+    origin: process.env.CORS_ORIGIN,
     credentials: true,
   })
 );
-
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
