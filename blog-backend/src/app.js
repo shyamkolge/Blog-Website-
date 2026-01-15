@@ -58,8 +58,6 @@ app.use("/api/v1/blogs", blogRoutes);
 // Follow User 
 app.use("/api/v1/connections", followRoutes);
 
-app.ge
-
 // Error handling middleware (must be last)
 app.use(globalErrorHandler);
 

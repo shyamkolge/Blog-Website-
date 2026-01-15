@@ -1,28 +1,45 @@
 import { userModel } from "../models/user.model.js";
 import { asyncHandler, ApiResponse, ApiError} from '../utils/index.js'
 import crypto from "crypto";
+import jwt from "jsonwebtoken";
 import sendEmail from "../services/emailSender.js"
 import uploadOnCloudinary from "../services/cloudinary.js"
 
 
+// Cookie options
+const accessTokenOptions = {
+  httpOnly: true,
+  secure: true,
+  sameSite: "none",
+  maxAge: 15 * 60 * 1000, // 15 minutes
+};
+
+const refreshTokenOptions = {
+  httpOnly: true,
+  secure: true,
+  sameSite: "none",
+  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+};
+
 
 const createSendToken = async (user, statusCode, message, res) => {
+  // Generate both tokens
+  const accessToken = user.generateAccessToken();
+  const refreshToken = user.generateRefreshToken();
 
-  const token = await user.generateAccessToken();
+  // Save refresh token to database
+  await userModel.findByIdAndUpdate(user._id, { refreshToken });
 
-  const options = {
-    expires: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
-    httpOnly: true,
-    secure: true,
-    sameSite: "none",
-  };
-
-  res.status(statusCode).cookie("token", token, options).json({
-    status: "success",
-    token,
-    message,
-    data: user,
-  });
+  res
+    .status(statusCode)
+    .cookie("token", accessToken, accessTokenOptions)
+    .cookie("refreshToken", refreshToken, refreshTokenOptions)
+    .json({
+      status: "success",
+      token: accessToken,
+      message,
+      data: user,
+    });
 };
 
 
@@ -113,16 +130,82 @@ const signUpUser = asyncHandler(async (req, res, next) => {
 
 // Logout User
 const logout = asyncHandler(async (req, res) => {
-   res.clearCookie("token", {
-    httpOnly: true,
-    secure: true,    
-    sameSite: "None", 
-  });
+  // Clear refresh token from database if user is logged in
+  if (req.user?._id) {
+    await userModel.findByIdAndUpdate(req.user._id, { refreshToken: null });
+  }
+
+  res
+    .clearCookie("token", {
+      httpOnly: true,
+      secure: true,    
+      sameSite: "None", 
+    })
+    .clearCookie("refreshToken", {
+      httpOnly: true,
+      secure: true,    
+      sameSite: "None", 
+    });
 
   return res.status(200).json(
     new ApiResponse(200, "success", null, "User logged out successfully")
   );
-})
+});
+
+
+// Refresh Access Token
+const refreshAccessToken = asyncHandler(async (req, res, next) => {
+  const incomingRefreshToken = req.cookies?.refreshToken;
+
+  if (!incomingRefreshToken) {
+    return next(new ApiError(401, "Refresh token not found. Please login again"));
+  }
+
+  try {
+    // Verify the refresh token
+    const decoded = jwt.verify(
+      incomingRefreshToken, 
+      process.env.REFRESH_TOKEN_SECRET
+    );
+
+    // Find user and include refreshToken field
+    const user = await userModel
+      .findById(decoded._id)
+      .select("+refreshToken");
+
+    if (!user) {
+      return next(new ApiError(401, "Invalid refresh token"));
+    }
+
+    // Check if refresh token matches the one in database
+    if (user.refreshToken !== incomingRefreshToken) {
+      return next(new ApiError(401, "Refresh token is expired or has been used"));
+    }
+
+    // Generate new tokens
+    const newAccessToken = user.generateAccessToken();
+    const newRefreshToken = user.generateRefreshToken();
+
+    // Update refresh token in database (token rotation for security)
+    user.refreshToken = newRefreshToken;
+    await user.save({ validateBeforeSave: false });
+
+    // Send new tokens
+    res
+      .status(200)
+      .cookie("token", newAccessToken, accessTokenOptions)
+      .cookie("refreshToken", newRefreshToken, refreshTokenOptions)
+      .json(
+        new ApiResponse(200, "success", { token: newAccessToken }, "Token refreshed successfully")
+      );
+
+  } catch (error) {
+    if (error.name === 'TokenExpiredError') {
+      return next(new ApiError(401, "Refresh token has expired. Please login again"));
+    }
+    return next(new ApiError(401, "Invalid refresh token"));
+  }
+});
 
 
 
@@ -316,5 +399,6 @@ export {
   resetPassword,
   updatePassword,
   getMe,
-  googleCallback
+  googleCallback,
+  refreshAccessToken
 };

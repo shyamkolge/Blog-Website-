@@ -1,5 +1,5 @@
 import AuthContext from "./AuthContext";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {loginAPI , logoutAPI, signupAPI, getMeApi } from '../../api/auth.api'
 import AppLoader from "../../pages/AppLoader";
 
@@ -7,6 +7,21 @@ const AuthProvider = ({ children }) => {
 
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  // Handle forced logout (e.g., refresh token expired)
+  const handleForcedLogout = useCallback(() => {
+    setUser(null);
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+  }, []);
+
+  // Listen for auth:logout event from axios interceptor
+  useEffect(() => {
+    window.addEventListener("auth:logout", handleForcedLogout);
+    return () => {
+      window.removeEventListener("auth:logout", handleForcedLogout);
+    };
+  }, [handleForcedLogout]);
 
   // Persistent Login
   useEffect(()=>{
