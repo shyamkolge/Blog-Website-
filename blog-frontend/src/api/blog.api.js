@@ -1,8 +1,19 @@
 import api from "./axios";
 
-// Get all blogs
-export const getAllBlogsAPI = async () => {
-  const response = await api.get("/v1/blogs");
+/**
+ * Get all blogs with sorting and pagination
+ * @param {Object} options - Query options
+ * @param {string} options.sort - Sorting strategy: 'smart' | 'latest' | 'oldest' | 'popular' | 'random'
+ * @param {number} options.page - Page number (default: 1)
+ * @param {number} options.limit - Items per page (default: 10)
+ * @param {string} options.category - Category slug to filter by
+ */
+export const getAllBlogsAPI = async (options = {}) => {
+  const { sort = 'smart', page = 1, limit = 10, category } = options;
+  const params = new URLSearchParams({ sort, page, limit });
+  if (category) params.append('category', category);
+  
+  const response = await api.get(`/v1/blogs?${params}`);
   return response.data;
 };
 
@@ -105,6 +116,14 @@ export const getTrendingBlogsAPI = async (options = {}) => {
   const response = await api.get(`/v1/blogs/trending?${params}`);
   return response.data;
 };
+
+// Get Followers blogs 
+export const getFollowersBlogsAPI = async (options = {}) => {
+  const { sort = 'latest' } = options;
+  const response = await api.get(`/v1/blogs/followers-blogs?sort=${sort}`);
+  return response.data;
+}
+
 
 // Create category
 export const getBlogsByCategoryAPI = async (slug) => {

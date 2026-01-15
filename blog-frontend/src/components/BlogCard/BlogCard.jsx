@@ -123,6 +123,7 @@ const BlogCard = ({
                   {blog.category.name || 'Uncategorized'}
                 </span>
               )}
+
               <div className="flex items-center space-x-4 flex-wrap">
                 <button
                   onClick={handleLikeClick}

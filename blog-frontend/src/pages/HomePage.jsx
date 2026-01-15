@@ -1,25 +1,51 @@
-import React, { useEffect, useState, useRef } from 'react'
+import React, { useEffect, useState, useRef, useCallback } from 'react'
 import { getAllBlogsAPI, checkUserLikedAPI, toggleLikeAPI } from '../api/blog.api'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { FiTag } from 'react-icons/fi'
+import { FiTag, FiClock, FiTrendingUp, FiShuffle, FiZap } from 'react-icons/fi'
 import useAuth from '../hooks/useAuth'
 import { useToast } from '../context/ToastContext'
 import BlogCard from '../components/BlogCard'
+
+// Sort options configuration
+const SORT_OPTIONS = [
+  { value: 'smart', label: 'For You', icon: FiZap, description: 'Personalized mix' },
+  { value: 'latest', label: 'Latest', icon: FiClock, description: 'Newest first' },
+  { value: 'popular', label: 'Popular', icon: FiTrendingUp, description: 'Most engaged' },
+  { value: 'random', label: 'Discover', icon: FiShuffle, description: 'Random picks' },
+]
 
 const HomePage = () => {
   const [blogs, setBlogs] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [likedBlogs, setLikedBlogs] = useState(new Set())
+  const [sortBy, setSortBy] = useState('smart')
+  
   const { user } = useAuth()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const toast = useToast()
   const hasShownGoogleAuthToast = useRef(false)
 
+  const fetchBlogs = useCallback(async () => {
+    try {
+      setLoading(true)
+      const response = await getAllBlogsAPI({ sort: sortBy, limit: 50 })
+      
+      if (response.success && response.data) {
+        setBlogs(response.data.blogs || [])
+      } 
+    } catch (err) {
+      setError('Failed to load blogs. Please try again later.')
+      console.error('Error fetching blogs:', err)
+    } finally {
+      setLoading(false)
+    }
+  }, [sortBy])
+
   useEffect(() => {
     fetchBlogs()
-  }, [])
+  }, [fetchBlogs])
 
   // Handle Google OAuth redirect - only show toast once
   useEffect(() => {
@@ -37,22 +63,6 @@ const HomePage = () => {
       checkLikedStatuses()
     }
   }, [user, blogs])
-
-  const fetchBlogs = async () => {
-    try {
-      setLoading(true)
-      const response = await getAllBlogsAPI()
-      if (response.success && response.data && response.data.length > 0) {
-        setBlogs(response.data)
-      } 
-    } catch (err) {
-      // On error, use sample data
-      setError('Failed to load blogs. Please try again later.')
-      console.error('Error fetching blogs:', err)
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const checkLikedStatuses = async () => {
     if (!user) return
@@ -139,7 +149,7 @@ const HomePage = () => {
   return (
     <div className="w-full">
       {/* Hero Section */}
-      <div className="mb-12 text-center py-8">
+      <div className="mb-8 text-center py-8">
         <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold dark:text-white text-gray-900 mb-4 bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 dark:from-white dark:via-gray-200 dark:to-white bg-clip-text text-transparent">
           Discover stories, thinking, and expertise
         </h1>
@@ -148,8 +158,48 @@ const HomePage = () => {
         </p>
       </div>
 
+      {/* Sort Options */}
+      <div className="mb-8">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          {SORT_OPTIONS.map((option) => {
+            const Icon = option.icon
+            const isActive = sortBy === option.value
+            return (
+              <button
+                key={option.value}
+                onClick={() => setSortBy(option.value)}
+                className={`
+                  flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium
+                  transition-all duration-200
+                  ${isActive 
+                    ? 'bg-black dark:bg-white text-white dark:text-black shadow-lg' 
+                    : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                  }
+                `}
+                title={option.description}
+              >
+                <Icon className="w-4 h-4" />
+                <span className="hidden sm:inline">{option.label}</span>
+              </button>
+            )
+          })}
+          
+          {/* Results count */}
+          {!loading && blogs.length > 0 && (
+            <span className="ml-auto text-sm text-gray-500 dark:text-gray-400 hidden sm:block">
+              {blogs.length} {blogs.length === 1 ? 'blog' : 'blogs'}
+            </span>
+          )}
+        </div>
+        
+        {/* Active sort description - mobile */}
+        <p className="mt-2 text-xs text-gray-500 dark:text-gray-400 sm:hidden">
+          {SORT_OPTIONS.find(o => o.value === sortBy)?.description}
+        </p>
+      </div>
+
       {/* Blogs List */}
-      {blogs.length === 0 ? (
+      {blogs.length === 0 && !loading ? (
         <div className="text-center py-16">
           <div className="max-w-md mx-auto">
             <div className="w-24 h-24 mx-auto mb-6 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center">

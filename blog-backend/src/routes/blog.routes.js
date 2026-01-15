@@ -15,7 +15,8 @@ import {
   deleteComment,
   bookmarkBlog,
   getBookmarkedBlogs,
-  getTrendingBlogs
+  getTrendingBlogs,
+  getFollowersBlogs
 } from "../controllers/blog.controller.js"
 import isLoggedIn from "../middlewares/auth.middleware.js";
 import optionalAuth from "../middlewares/optionalAuth.middleware.js";
@@ -36,6 +37,7 @@ router.get("/slug/:slug", getBlogBySlug);
 router.get("/user-blogs", isLoggedIn, getUserBlogs);
 router.get("/liked-posts", isLoggedIn, getUserLikedPosts);
 router.get("/comments", isLoggedIn, getUserComments);
+router.get("/followers-blogs", isLoggedIn, getFollowersBlogs);
 
 // Like routes
 router.post("/:blogId/like", isLoggedIn, toggleLike);

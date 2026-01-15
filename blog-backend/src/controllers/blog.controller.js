@@ -5,6 +5,7 @@ import likeModel from "../models/blog.like.model.js";
 import commentModel from "../models/blog.comments.model.js";
 import uploadOnCloudinary from "../services/cloudinary.js";
 import { userModel } from "../models/user.model.js";
+import followModel from '../models/followUser.model.js';
 import { updateBlogTrendingScore } from "../services/trendingService.js";
 
 // Create blog
@@ -88,7 +89,7 @@ const updateBlog = asyncHandler(async (req, res) => {
   return res.json(new ApiResponse(200, blog, "Blog updated successfully"));
 });
 
-// Get usr blog
+// Get user blog
 const getUserBlogs = asyncHandler(async (req, res) => {
   const author = req?.user._id;
   const blogs = await blogModel.find({ author })
@@ -99,13 +100,268 @@ const getUserBlogs = asyncHandler(async (req, res) => {
 });
 
 
-// Get all blogs
+/**
+ * Get All Blogs with Smart Sorting Options
+ * 
+ * Sorting Strategies:
+ * 1. "latest"     - Newest first (chronological)
+ * 2. "oldest"     - Oldest first
+ * 3. "popular"    - Most engagement (likes + comments + reads)
+ * 4. "smart"      - Balanced algorithm (DEFAULT) - fair exposure for all
+ * 5. "random"     - Randomized feed for discovery
+ * 
+ * The "smart" algorithm balances:
+ * - Engagement score (40%)
+ * - Recency bonus (30%)
+ * - Random factor (30%) - gives older posts a chance
+ */
 const getAllBlogs = asyncHandler(async (req, res) => {
-  const blogs = await blogModel.find({ visibility: 'public' })
-    .populate('author', 'firstName lastName username profilePhoto email')
-    .populate('category', 'name slug')
-    .sort({ createdAt: -1 });
-  return res.json(new ApiResponse(200, blogs, "Blogs fetched successfully"));
+  const { 
+    sort = 'smart',  // Default to smart sorting
+    page = 1, 
+    limit = 10,
+    category 
+  } = req.query;
+
+  const skip = (parseInt(page) - 1) * parseInt(limit);
+  
+  // Base query
+  const matchQuery = { visibility: 'public' };
+  
+  // Add category filter if provided
+  if (category) {
+    const categoryDoc = await BlogCategoryController.findOne({ slug: category });
+    if (categoryDoc) {
+      matchQuery.category = categoryDoc._id;
+    }
+  }
+
+  let blogs;
+  let totalCount;
+
+  switch (sort) {
+    case 'latest':
+      // Simple chronological - newest first
+      blogs = await blogModel.find(matchQuery)
+        .populate('author', 'firstName lastName username profilePhoto email')
+        .populate('category', 'name slug')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(parseInt(limit));
+      totalCount = await blogModel.countDocuments(matchQuery);
+      break;
+
+    case 'oldest':
+      // Oldest first
+      blogs = await blogModel.find(matchQuery)
+        .populate('author', 'firstName lastName username profilePhoto email')
+        .populate('category', 'name slug')
+        .sort({ createdAt: 1 })
+        .skip(skip)
+        .limit(parseInt(limit));
+      totalCount = await blogModel.countDocuments(matchQuery);
+      break;
+
+    case 'popular':
+      // Most engagement - good for "best of all time"
+      blogs = await blogModel.aggregate([
+        { $match: matchQuery },
+        {
+          $addFields: {
+            popularityScore: {
+              $add: [
+                { $multiply: [{ $ifNull: ["$likeCount", 0] }, 3] },
+                { $multiply: [{ $ifNull: ["$commentCount", 0] }, 5] },
+                { $ifNull: ["$readCount", 0] }
+              ]
+            }
+          }
+        },
+        { $sort: { popularityScore: -1 } },
+        { $skip: skip },
+        { $limit: parseInt(limit) },
+        // Lookup author
+        {
+          $lookup: {
+            from: "users",
+            localField: "author",
+            foreignField: "_id",
+            as: "author",
+            pipeline: [
+              { $project: { firstName: 1, lastName: 1, username: 1, profilePhoto: 1, email: 1 } }
+            ]
+          }
+        },
+        { $unwind: { path: "$author", preserveNullAndEmptyArrays: true } },
+        // Lookup category
+        {
+          $lookup: {
+            from: "blogcategories",
+            localField: "category",
+            foreignField: "_id",
+            as: "category",
+            pipeline: [{ $project: { name: 1, slug: 1 } }]
+          }
+        },
+        { $unwind: { path: "$category", preserveNullAndEmptyArrays: true } },
+        { $project: { popularityScore: 0 } }
+      ]);
+      totalCount = await blogModel.countDocuments(matchQuery);
+      break;
+
+    case 'random':
+      // Random sampling - great for discovery
+      blogs = await blogModel.aggregate([
+        { $match: matchQuery },
+        { $sample: { size: parseInt(limit) } },
+        // Lookup author
+        {
+          $lookup: {
+            from: "users",
+            localField: "author",
+            foreignField: "_id",
+            as: "author",
+            pipeline: [
+              { $project: { firstName: 1, lastName: 1, username: 1, profilePhoto: 1, email: 1 } }
+            ]
+          }
+        },
+        { $unwind: { path: "$author", preserveNullAndEmptyArrays: true } },
+        // Lookup category
+        {
+          $lookup: {
+            from: "blogcategories",
+            localField: "category",
+            foreignField: "_id",
+            as: "category",
+            pipeline: [{ $project: { name: 1, slug: 1 } }]
+          }
+        },
+        { $unwind: { path: "$category", preserveNullAndEmptyArrays: true } }
+      ]);
+      totalCount = await blogModel.countDocuments(matchQuery);
+      break;
+
+    case 'smart':
+    default:
+      /**
+       * Smart Feed Algorithm
+       * 
+       * Score = (engagementScore × 0.4) + (recencyScore × 0.3) + (randomFactor × 0.3)
+       * 
+       * This ensures:
+       * - High-quality content gets visibility (engagement)
+       * - New content gets a chance (recency)
+       * - Old but good content can resurface (random factor)
+       */
+      const now = new Date();
+      const maxAgeDays = 30; // Consider posts from last 30 days for recency bonus
+      const maxAgeMs = maxAgeDays * 24 * 60 * 60 * 1000;
+
+      blogs = await blogModel.aggregate([
+        { $match: matchQuery },
+        {
+          $addFields: {
+            // 1. Engagement Score (normalized 0-100)
+            engagementScore: {
+              $min: [
+                100,
+                {
+                  $add: [
+                    { $multiply: [{ $ifNull: ["$likeCount", 0] }, 2] },
+                    { $multiply: [{ $ifNull: ["$commentCount", 0] }, 4] },
+                    { $multiply: [{ $ifNull: ["$readCount", 0] }, 0.1] }
+                  ]
+                }
+              ]
+            },
+            
+            // 2. Recency Score (100 for new posts, decays over maxAgeDays)
+            ageMs: { $subtract: [now, "$createdAt"] },
+          }
+        },
+        {
+          $addFields: {
+            recencyScore: {
+              $max: [
+                0,
+                {
+                  $multiply: [
+                    100,
+                    { $subtract: [1, { $divide: [{ $min: ["$ageMs", maxAgeMs] }, maxAgeMs] }] }
+                  ]
+                }
+              ]
+            },
+            
+            // 3. Random Factor (0-100) - gives every post a chance
+            randomFactor: { $multiply: [{ $rand: {} }, 100] }
+          }
+        },
+        {
+          $addFields: {
+            // Final Smart Score
+            smartScore: {
+              $add: [
+                { $multiply: ["$engagementScore", 0.4] },  // 40% engagement
+                { $multiply: ["$recencyScore", 0.3] },    // 30% recency
+                { $multiply: ["$randomFactor", 0.3] }     // 30% random (fair chance)
+              ]
+            }
+          }
+        },
+        { $sort: { smartScore: -1 } },
+        { $skip: skip },
+        { $limit: parseInt(limit) },
+        // Lookup author
+        {
+          $lookup: {
+            from: "users",
+            localField: "author",
+            foreignField: "_id",
+            as: "author",
+            pipeline: [
+              { $project: { firstName: 1, lastName: 1, username: 1, profilePhoto: 1, email: 1 } }
+            ]
+          }
+        },
+        { $unwind: { path: "$author", preserveNullAndEmptyArrays: true } },
+        // Lookup category
+        {
+          $lookup: {
+            from: "blogcategories",
+            localField: "category",
+            foreignField: "_id",
+            as: "category",
+            pipeline: [{ $project: { name: 1, slug: 1 } }]
+          }
+        },
+        { $unwind: { path: "$category", preserveNullAndEmptyArrays: true } },
+        // Clean up internal fields
+        {
+          $project: {
+            engagementScore: 0,
+            recencyScore: 0,
+            randomFactor: 0,
+            smartScore: 0,
+            ageMs: 0
+          }
+        }
+      ]);
+      totalCount = await blogModel.countDocuments(matchQuery);
+      break;
+  }
+
+  return res.json(new ApiResponse(200, {
+    blogs,
+    pagination: {
+      currentPage: parseInt(page),
+      totalPages: Math.ceil(totalCount / parseInt(limit)),
+      totalBlogs: totalCount,
+      hasMore: skip + blogs.length < totalCount
+    },
+    sortedBy: sort
+  }, "Blogs fetched successfully"));
 });
 
 
@@ -338,6 +594,44 @@ const getBlogBySlug = asyncHandler(async (req, res) => {
   return res.json(new ApiResponse(200, blog, "Blog fetched successfully"));
 });
 
+
+
+// Get followers blog 
+const getFollowersBlogs = asyncHandler(async (req, res) => {
+  const { sort = 'latest' } = req.query;
+  const userId = req?.user._id;
+
+  const following = await followModel.find({ userId }).select("authorId");
+
+  if (!following.length) {
+    return res.json(
+      new ApiResponse(200, { blogs: [], followingCount: 0 }, "No blogs from followed users")
+    );
+  }
+
+  const followedUserIds = following.map(f => f.authorId);
+
+  // Determine sort order
+  let sortOption = { createdAt: -1 }; // Default: latest first
+  if (sort === 'oldest') {
+    sortOption = { createdAt: 1 };
+  }
+
+  const blogs = await blogModel.find({ 
+    author: { $in: followedUserIds },
+    visibility: 'public'
+  })
+    .populate('author', 'firstName lastName username profilePhoto email')
+    .populate('category', 'name slug')
+    .sort(sortOption);
+    
+  return res.json(new ApiResponse(200, {
+    blogs,
+    followingCount: followedUserIds.length,
+    totalBlogs: blogs.length,
+    sortedBy: sort
+  }, "Blogs fetched successfully"));
+})
 
 
 // Get user's liked posts
@@ -586,12 +880,13 @@ export {
   getBlogBySlug,
   getUserLikedPosts,
   getUserComments,
+  getTrendingBlogs,
+  getBlogComments,
+  getBookmarkedBlogs,
+  getFollowersBlogs,
   toggleLike,
   checkUserLiked,
   addComment,
-  getBlogComments,
   deleteComment,
-  getBookmarkedBlogs,
   bookmarkBlog,
-  getTrendingBlogs
 };
