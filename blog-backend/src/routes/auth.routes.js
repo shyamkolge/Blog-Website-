@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { loginUser, resetPassword, signUpUser, logout, updatePassword, forgotPassword, getMe, googleCallback  } from '../controllers/auth.controller.js';
+import { loginUser, resetPassword, signUpUser, logout, updatePassword, forgotPassword, getMe, googleCallback, refreshAccessToken  } from '../controllers/auth.controller.js';
 import {loginSchema, forgotPasswordSchema, signupSchema, updatePasswordSchema, resetPasswordSchema } from '../utils/auth/authValidator.js'
 import { validate } from '../middlewares/inputValidate.js';
 import isLoggedIn from '../middlewares/auth.middleware.js';
@@ -13,6 +13,9 @@ router.get("/me", isLoggedIn, getMe);
 router.post("/login", validate(loginSchema), loginUser);
 router.post("/sign-up", upload.single("profileImage"), validate(signupSchema), signUpUser);
 router.get("/log-out", logout);
+
+// Refresh Token
+router.post("/refresh-token", refreshAccessToken);
 
 // Update Password
 router.patch(

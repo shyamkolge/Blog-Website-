@@ -83,6 +83,10 @@ const userSchema = new mongoose.Schema(
     passwordResetExpires: {
       type: Date,
     },
+    refreshToken: {
+      type: String,
+      select: false, // Don't include in queries by default
+    },
     isActive: {
       type: Boolean,
       default: true,
@@ -139,14 +143,25 @@ userSchema.methods.createPasswordResetToken = function () {
   return resetToken;
 };
 
-// Generate Access Token
-userSchema.methods.generateAccessToken = async function () {
-  return await jwt.sign(
+// Generate Access Token (short-lived)
+userSchema.methods.generateAccessToken = function () {
+  return jwt.sign(
     {
       _id: this._id,
     },
     process.env.ACCESS_TOKEN_SECRET,
-    { expiresIn: process.env.ACCESS_TOKEN_EXPIRY }
+    { expiresIn: process.env.ACCESS_TOKEN_EXPIRY || "15m" }
+  );
+};
+
+// Generate Refresh Token (long-lived)
+userSchema.methods.generateRefreshToken = function () {
+  return jwt.sign(
+    {
+      _id: this._id,
+    },
+    process.env.REFRESH_TOKEN_SECRET,
+    { expiresIn: process.env.REFRESH_TOKEN_EXPIRY || "7d" }
   );
 };
 

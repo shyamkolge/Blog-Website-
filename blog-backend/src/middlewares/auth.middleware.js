@@ -32,7 +32,20 @@ const isLoggedIn = asyncHandler(async (req, res, next) => {
 
     next();
   } catch (error) {
-    console.log("Error in isLoggedIn middleware : ", error);
+    // Handle specific JWT errors
+    if (error.name === 'TokenExpiredError') {
+      return next(new ApiError(401, "Token has expired. Please login again"));
+    }
+    if (error.name === 'JsonWebTokenError') {
+      return next(new ApiError(401, "Invalid token. Please login again"));
+    }
+    if (error.name === 'NotBeforeError') {
+      return next(new ApiError(401, "Token not yet valid"));
+    }
+    
+    // For any other errors
+    console.log("Error in isLoggedIn middleware:", error);
+    return next(new ApiError(401, "Authentication failed"));
   }
 });
 
