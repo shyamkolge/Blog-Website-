@@ -15,7 +15,7 @@
 
 **A full-stack blog platform where users can share their stories, follow authors, and engage with content.**
 
-[Live Demo](#) · [Report Bug](../../issues) · [Request Feature](../../issues)
+[Live Demo](https://blogwebsite-lime-delta.vercel.app/) · [Report Bug](../../issues) · [Request Feature](../../issues)
 
 </div>
 
@@ -137,7 +137,7 @@
 
 </div>
 
-> 📌 **Note:** Add your screenshots to the `screenshots/` folder and update the paths above.
+> 📌 **Note:** You can visite the live link.
 
 ---
 
@@ -155,7 +155,7 @@ Make sure you have the following installed:
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/blog-website.git
+   git clone https://github.com/shyamkolge/Blog_Website.git
    cd blog-website
    ```
 
@@ -375,9 +375,9 @@ Distributed under the MIT License. See `LICENSE` for more information.
 
 ## 📧 Contact
 
-**Your Name** - [@yourtwitter](https://twitter.com/yourtwitter) - your.email@example.com
+**Your Name** - [LinkedIn](https://www.linkedin.com/in/shyam-kolge/) - shyamnkolge2020@gmail.com
 
-Project Link: [https://github.com/yourusername/blog-website](https://github.com/yourusername/blog-website)
+Project Link: [Website Link](https://blogwebsite-lime-delta.vercel.app/)
 
 ---
 
